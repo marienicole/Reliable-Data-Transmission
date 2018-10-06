@@ -82,6 +82,7 @@ class NetworkLayer:
         totalsent = 0
         while totalsent < len(msg_S):
             sent = self.conn.send(msg_S[totalsent:].encode('utf-8'))
+            print("sent is %s" % sent)
             if sent == 0:
                 raise RuntimeError("socket connection broken")
             totalsent = totalsent + sent

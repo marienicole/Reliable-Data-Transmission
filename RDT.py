@@ -92,9 +92,12 @@ class RDT:
     def rdt_2_1_send(self, msg_S):
         p = Packet(self.seq_num, msg_S)
         w = self.network.udt_send(p.get_byte_S())
-        while w is None:
+        while w is None: # if return none, then corrupted or whatever. Send
+                         # packet again
             w = self.network.udt_send(p.get_byte_S())
         self.seq_num += 1
+        # add if not and sleep for some amt time? then re-try?
+        
 
 
 
