@@ -154,6 +154,8 @@ class RDT:
                 print("packet corrupt")
                 neg_resp = Packet(self.seq_num, "0") # send corrupted seq num
                 self.network.udt_send(neg_resp)
+                return
+
 
             else:
                 print("packet ok")
@@ -164,6 +166,8 @@ class RDT:
                 ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
                 self.byte_buffer = self.byte_buffer[length:]
+
+            return ret_S
             #if this was the last packet, will return on the next iteration
        # if corrupt, we send NAK
        # if timeout, we re-send the packet?
