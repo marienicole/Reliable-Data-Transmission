@@ -89,18 +89,50 @@ class RDT:
             self.byte_buffer = self.byte_buffer[length:]
             #if this was the last packet, will return on the next iteration
 
+    def is_ACK(self, response):
+        if response == '0': # is a NAK, not ACK
+            return False
+        else: # is ACK
+            return True
+
+    def is_corrupt(self, bytes):
+        if Packet.corrupt(bytes):
+            print('deff corrupted')
+            return True
+        else:
+            print('not corrupted')
+        return False
+
+
     def rdt_2_1_send(self, msg_S):
         p = Packet(self.seq_num, msg_S)
-        w = self.network.udt_send(p.get_byte_S())
-        while w is None: # if return none, then corrupted or whatever. Send
-                         # packet again
-            w = self.network.udt_send(p.get_byte_S())
-        self.seq_num += 1
-        # add if not and sleep for some amt time? then re-try?
-        
+        print("Sequence number is %d" % p.seq_num)
+
+        while True:
+            r = ''
+            self.network.udt_send(p.get_byte_S())
+            while r == '':
+                r = self.network.udt_receive()
+                print('waiting for response ... i aint got nothin ')
+                sleep(1)
+
+            print('response received')
+
+            l = int(r[:Packet.length_S_length])
+            p_info = p.from_byte_S(r[:l])
+            response = p_info.msg_S
+
+            if not self.is_ACK(r):
+                print("nak")
+            elif self.is_ACK(r):
+                print("ack")
+                self.seq_num += 1
+                break
+            elif self.is_corrupted(r):
+                print("corrupted")
 
 
-
+        # add if not and sleep for some amt time? then re-try? aka wait
 
     def rdt_2_1_receive(self):
         ret_S = None
@@ -116,11 +148,22 @@ class RDT:
             if len(self.byte_buffer) < length:
                 return ret_S #not enough bytes to read the whole packet
             #create packet from buffer content and add to return string
-            p = Packet.from_byte_S(self.byte_buffer[0:length])
 
-            ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
+            # if packet is corrupt send which is corrupt
+            if self.is_corrupt(self.byte_buffer):
+                print("packet corrupt")
+                neg_resp = Packet(self.seq_num, "0") # send corrupted seq num
+                self.network.udt_send(neg_resp)
+
+            else:
+                print("packet ok")
+                p = Packet.from_byte_S(self.byte_buffer[0:length])
+                ack_packet = Packet(self.seq_num, "1") # one is good!!
+                self.network.udt_send(ack_packet.get_byte_S())
+
+                ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
-            self.byte_buffer = self.byte_buffer[length:]
+                self.byte_buffer = self.byte_buffer[length:]
             #if this was the last packet, will return on the next iteration
        # if corrupt, we send NAK
        # if timeout, we re-send the packet?

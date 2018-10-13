@@ -1,8 +1,8 @@
 import argparse
+import random
 import socket
 import threading
 from time import sleep
-import random
 import RDT
 
 
@@ -60,7 +60,7 @@ class NetworkLayer:
         #return without sending if the packet is being dropped
         if random.random() < self.prob_pkt_loss:
             print('dropped packet')
-            return None
+            return
         #corrupt a packet
         if random.random() < self.prob_byte_corr:
             start = random.randint(RDT.Packet.length_S_length,len(msg_S)-5) #make sure we are not corrupting the length field,
@@ -73,7 +73,7 @@ class NetworkLayer:
             if self.reorder_msg_S is None:
                 self.reorder_msg_S = msg_S
                 print('packets reordered')
-                return None
+                return
             else:
                 msg_S += self.reorder_msg_S
                 self.reorder_msg_S = None
@@ -86,9 +86,7 @@ class NetworkLayer:
             if sent == 0:
                 raise RuntimeError("socket connection broken")
             totalsent = totalsent + sent
-
         print('we made it')
-        return -1
 
 
     ## Receive data from the network and save in internal buffer
@@ -114,7 +112,6 @@ class NetworkLayer:
             ret_S = self.buffer_S
             self.buffer_S = ''
         return ret_S
-
 
 
 if __name__ == '__main__':
