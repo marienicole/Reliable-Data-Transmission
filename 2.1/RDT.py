@@ -90,7 +90,7 @@ class RDT:
             #if this was the last packet, will return on the next iteration
 
     def is_ACK(self, response):
-        if response == '0': # is a NAK, not ACK
+        if response == 'NAK': # is a NAK, not ACK
             return False
         else: # is ACK
             return True
@@ -106,55 +106,17 @@ class RDT:
 
     def rdt_2_1_send(self, msg_S):
         p = Packet(self.seq_num, msg_S)
-        self.seq_num += 1
         self.network.udt_send(p.get_byte_S())
+        r = ''
 
-        # while p_seq_num == self.seq_num:
-        #     self.network.udt_send(p.get_byte_S())
-        #
-        #     while r is '':
-        #         r = self.network.udt_receive()
-        #         print(r)
-        #
-        #
-        #
-        # p = Packet(self.seq_num, msg_S)
-        # print("Sequence number is %d" % p.seq_num)
-        # curr_seq_num = self.seq_num
-        #
-        # while curr_seq_num == self.seq_num:
-        #     r = ''
-        #     self.network.udt_send(p.get_byte_S())
-        #     while r is '':
-        #         r = self.network.udt_receive()
-        #         print(r)
-        #         sleep(1)
-        #
-        #     print('response received')
-        #
-        #     l = int(r[:Packet.length_S_length])
-        #     self.byte_buffer = r[l:]
-        #     p_info = p.from_byte_S(r[:l])
-        #     r = p_info.msg_S
-        #
-        #     if self.is_corrupt(r):
-        #         print("corrupted")
-        #         self.byte_buffer = ''
-        #     else:
-        #         if p_info.seq_num < self.seq_num:
-        #             # send packet again
-        #             new_p = Packet(p_info.seq_num, "1")
-        #             print("sending packet again, sequence number is %d" % new_p.seq_num)
-        #             self.network.udt_send(new_p.get_byte_S())
-        #         elif not self.is_ACK(r):
-        #             print("nak")
-        #             self.byte_buffer = ''
-        #         elif self.is_ACK(r):
-        #             print("ack")
-        #             self.seq_num += 1
+        while r == '':
+            r = self.network.udt_receive()
+            print("R is %s\n" % r)
 
-
-        # add if not and sleep for some amt time? then re-try? aka wait
+            while 'NAK' in r:
+                self.network.udt_send(p.get_byte_S())
+            print("R is %s after re-sending %s" %(r, p.get_byte_S()))
+        self.seq_num += 1
 
     def rdt_2_1_receive(self):
         ret_S = None
@@ -164,6 +126,11 @@ class RDT:
         #keep extracting packets - if reordered, could get more than one
         while True:
             #check if we have received enough bytes
+            if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
+                neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
+                self.network.udt_send(neg_resp.get_byte_S())
+                #ret_s = p.msg_S
+
             if(len(self.byte_buffer) < Packet.length_S_length):
                 return ret_S #not enough bytes to read packet length
             #extract length of packet
