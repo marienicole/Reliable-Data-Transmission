@@ -107,8 +107,9 @@ class RDT:
     def rdt_2_1_send(self, msg_S):
         p = Packet(self.seq_num, msg_S)
         print("Sequence number is %d" % p.seq_num)
+        curr_seq_num = self.seq_num
 
-        while True:
+        while curr_seq_num == self.seq_num:
             r = ''
             self.network.udt_send(p.get_byte_S())
             while r == '':
@@ -119,17 +120,25 @@ class RDT:
             print('response received')
 
             l = int(r[:Packet.length_S_length])
+            self.byte_buffer = r[l:]
             p_info = p.from_byte_S(r[:l])
-            response = p_info.msg_S
+            r = p_info.msg_S
 
-            if not self.is_ACK(r):
-                print("nak")
-            elif self.is_ACK(r):
-                print("ack")
-                self.seq_num += 1
-                break
-            elif self.is_corrupted(r):
+            if self.is_corrupt(r):
                 print("corrupted")
+                self.byte_buffer = ''
+            else:
+                if p_info.seq_num < self.seq_num:
+                    # send packet again
+                    new_p = Packet(p_info.seq_num, "1")
+                    print("sending packet again, sequence number is %d" % new_p.seq_num)
+                    self.network.udt_send(new_p.get_byte_S())
+                elif not self.is_ACK(r):
+                    print("nak")
+                    self.byte_buffer = ''
+                elif self.is_ACK(r):
+                    print("ack")
+                    self.seq_num += 1
 
 
         # add if not and sleep for some amt time? then re-try? aka wait
