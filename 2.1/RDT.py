@@ -109,15 +109,17 @@ class RDT:
             if 'ACK' in str(self.byte_buffer):
                 print(' i am ack')
                 break
-            elif self.is_corrupt(self.byte_buffer):
+            elif self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
+                print("packet is corrupted. Send NAK")
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
                 #ret_s = p.msg_S
             else:
+                print("Packet is okay. Send ACK")
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
 
-            sleep(.2)
+            sleep(.5)
             p = Packet.from_byte_S(self.byte_buffer[0:length])
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
