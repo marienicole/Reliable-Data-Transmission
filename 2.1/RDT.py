@@ -65,11 +65,10 @@ class RDT:
         self.network.disconnect()
 
     def is_ACK(self, response):
-        if 'NAK' in response: # is a NAK, not ACK
-            print(response)
-            return False
-        else: # is ACK
+        if 'ACK' in response: # is ack
             return True
+        else: # is NAK
+            return False
 
     def is_corrupt(self, bytes):
         if Packet.corrupt(bytes):
@@ -81,7 +80,8 @@ class RDT:
         p = Packet(self.seq_num, msg_S)
         r = ''
         self.network.udt_send(p.get_byte_S())
-        
+        sleep(.5)
+
         while 'NAK' in r or r is '':
             if msg_S == 'ACK':
                 break
@@ -90,13 +90,14 @@ class RDT:
 
             if 'NAK' in r or r is '': # if we have an actual message
                 self.network.udt_send(p.get_byte_S())
-                sleep(1)
+                sleep(.5)
             else:
                 break
 
         self.seq_num += 1
 
     def rdt_2_1_receive(self):
+        self.byte_buffer = ''
         ret_S = None
         byte_S = self.network.udt_receive()
         self.byte_buffer += byte_S
@@ -112,61 +113,20 @@ class RDT:
             #create packet from buffer content and add to return string
             #check if we have received enough bytes
             if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
-                self.byte_buffer = self.byte_buffer.replace(byte_S, "")
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
-                break
+                sleep(.5)
                 #ret_s = p.msg_S
             else:
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
+                sleep(.5)
 
             p = Packet.from_byte_S(self.byte_buffer[0:length])
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
-
+            length = int(self.byte_buffer[:Packet.length_S_length])
             self.byte_buffer = self.byte_buffer[length:]
-            #print("in RECEIVE: bye buffer at end is %s" % self.byte_buffer)
-            #if this was the last packet, will return on the next iteration
-       #
-       #
-       #
-       #  ret_S = None
-       #  byte_S = self.network.udt_receive()
-       #  self.byte_buffer += byte_S
-       #  #keep extracting packets - if reordered, could get more than one
-       #  while True:
-       #      #check if we have received enough bytes
-       #      if(len(self.byte_buffer) < Packet.length_S_length):
-       #          return ret_S #not enough bytes to read packet length
-       #      #extract length of packet
-       #      length = int(self.byte_buffer[:Packet.length_S_length])
-       #      if len(self.byte_buffer) < length:
-       #          return ret_S #not enough bytes to read the whole packet
-       #      #create packet from buffer content and add to return string
-       #
-       #      # if packet is corrupt send which is corrupt
-       #      if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
-       #          neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
-       #          self.network.udt_send(neg_resp)
-       #          ret_s = p.msg_S
-       #
-       #      elif
-       #
-       #      else:
-       #          print("packet ok")
-       #          p = Packet.from_byte_S(self.byte_buffer[0:length])
-       #          ack_packet = Packet(self.seq_num, "1") # one is good!!
-       #          self.network.udt_send(ack_packet.get_byte_S())
-       #
-       #          ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
-       #      #remove the packet bytes from the buffer
-       #          self.byte_buffer = self.byte_buffer[length:]
-       #
-       #      return ret_S
-       #      #if this was the last packet, will return on the next iteration
-       # # if corrupt, we send NAK
-       # # if timeout, we re-send the packet?
 
     def rdt_3_0_send(self, msg_S):
         pass
