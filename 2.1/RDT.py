@@ -78,16 +78,15 @@ class RDT:
 
     def rdt_2_1_send(self, msg_S):
         p = Packet(self.seq_num, msg_S)
-        self.network.udt_send(p.get_byte_S())
         r = 'NAK'
+        self.network.udt_send(p.get_byte_S())
+
         while 'NAK' in r or r is '':
             r = self.network.udt_receive()
-
             print("in SEND: R is %s" % r)
-
-            if 'NAK' not in r or r is not '':
+            if 'NAK' not in r or r is not '': # if we have an actual message
                 break
-            else:
+            else: # otherwise, we should re-send
                 self.network.udt_send(p.get_byte_S())
         self.seq_num += 1
 
@@ -103,7 +102,6 @@ class RDT:
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 print("in RECEIVE: neg_resp message is %s" % neg_resp.get_byte_S())
                 self.network.udt_send(neg_resp.get_byte_S())
-                continue
                 #ret_s = p.msg_S
 
             if(len(self.byte_buffer) < Packet.length_S_length):
@@ -114,10 +112,13 @@ class RDT:
                 return ret_S #not enough bytes to read the whole packet
             #create packet from buffer content and add to return string
             p = Packet.from_byte_S(self.byte_buffer[0:length])
+
             print("in RECEIVE: new packet byte is %s" % p.get_byte_S())
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
+
             self.byte_buffer = self.byte_buffer[length:]
+            print("in RECEIVE: bye buffer at end is %s" % self.byte_buffer)
             #if this was the last packet, will return on the next iteration
         return ret_S
        #
