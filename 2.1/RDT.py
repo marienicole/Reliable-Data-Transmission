@@ -80,17 +80,15 @@ class RDT:
         p = Packet(self.seq_num, msg_S)
         r = ''
         self.network.udt_send(p.get_byte_S())
-        sleep(.5)
 
         while 'NAK' in r or r is '':
             if msg_S == 'ACK':
                 break
-
+            sleep(.2)
             r = self.network.udt_receive()
 
             if 'NAK' in r or r is '': # if we have an actual message
                 self.network.udt_send(p.get_byte_S())
-                sleep(.5)
             else:
                 break
 
@@ -115,12 +113,12 @@ class RDT:
             if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
-                sleep(.5)
+                sleep(.2)
                 #ret_s = p.msg_S
             else:
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
-                sleep(.5)
+                sleep(.2)
 
             p = Packet.from_byte_S(self.byte_buffer[0:length])
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
