@@ -82,23 +82,21 @@ class RDT:
         p = Packet(self.seq_num, msg_S)
         r = ''
         self.network.udt_send(p.get_byte_S())
-        sleep(.5)
+        if 'NAK' not in msg_S or 'ACK' not in msg_S:
+            while 'NAK' in r or r is '':
 
-        while 'NAK' in r or r is '':
-            if msg_S == 'ACK':
-                break
+                timeout = time.time() + 0.5 # timeout of 0.5 seconds from start time
+                while r is '' and timeout >= time.time():
+                    r = self.network.udt_receive()
+                if r is '':
+                    print("timed out, resend message")
 
-            timeout = time.time() + 2.5 # timeout of 2.5 seconds from start time
-
-            while r is '' and timeout >= time.time():
-                r = self.network.udt_receive()
-
-            if 'NAK' in r or r is '': # if we have an actual message
-                self.network.udt_send(p.get_byte_S())
                 sleep(.5)
-            else:
-                break
-
+                if 'NAK' in r or r is '': # if we have an actual message
+                    self.network.udt_send(p.get_byte_S())
+                    sleep(.5)
+                else:
+                    break
         self.seq_num += 1
 
     def rdt_3_0_receive(self):
@@ -108,7 +106,6 @@ class RDT:
         self.byte_buffer += byte_S
         #keep extracting packets - if reordered, could get more than one
         while True:
-
             if(len(self.byte_buffer) < Packet.length_S_length):
                 return ret_S #not enough bytes to read packet length
             #extract length of packet
@@ -117,16 +114,18 @@ class RDT:
                 return ret_S #not enough bytes to read the whole packet
             #create packet from buffer content and add to return string
             #check if we have received enough bytes
-            if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
+            if 'ACK' in str(self.byte_buffer):
+                print(' i am ack')
+                break
+            elif self.is_corrupt(self.byte_buffer):
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
-                sleep(.5)
                 #ret_s = p.msg_S
             else:
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
-                sleep(.5)
 
+            sleep(.2)
             p = Packet.from_byte_S(self.byte_buffer[0:length])
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
