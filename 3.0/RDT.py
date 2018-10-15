@@ -82,26 +82,27 @@ class RDT:
         p = Packet(self.seq_num, msg_S)
         r = ''
         self.network.udt_send(p.get_byte_S())
-        
+        sleep(.5)
+
         while 'NAK' in r or r is '':
             if msg_S == 'ACK':
                 break
-            
-            start_time = time.time()
-            timeout_duration = 3
 
-            while r == '' and start_time + timeout_duration >= time.time():
+            timeout = time.time() + 2.5 # timeout of 2.5 seconds from start time
+
+            while r is '' and timeout >= time.time():
                 r = self.network.udt_receive()
 
             if 'NAK' in r or r is '': # if we have an actual message
                 self.network.udt_send(p.get_byte_S())
-                sleep(1)
+                sleep(.5)
             else:
                 break
 
         self.seq_num += 1
 
     def rdt_3_0_receive(self):
+        self.byte_buffer = ''
         ret_S = None
         byte_S = self.network.udt_receive()
         self.byte_buffer += byte_S
@@ -117,22 +118,20 @@ class RDT:
             #create packet from buffer content and add to return string
             #check if we have received enough bytes
             if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
-                self.byte_buffer = self.byte_buffer.replace(byte_S, "")
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
-                break
+                sleep(.5)
                 #ret_s = p.msg_S
             else:
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
+                sleep(.5)
 
             p = Packet.from_byte_S(self.byte_buffer[0:length])
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
-
+            length = int(self.byte_buffer[:Packet.length_S_length])
             self.byte_buffer = self.byte_buffer[length:]
-            #print("in RECEIVE: bye buffer at end is %s" % self.byte_buffer)
-            #if this was the last packet, will return on the next iteration
       
 
     def rdt_2_1_send(self, msg_S):
