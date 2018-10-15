@@ -101,7 +101,6 @@ class RDT:
         self.byte_buffer += byte_S
         #keep extracting packets - if reordered, could get more than one
         while True:
-
             if(len(self.byte_buffer) < Packet.length_S_length):
                 return ret_S #not enough bytes to read packet length
             #extract length of packet
@@ -110,16 +109,18 @@ class RDT:
                 return ret_S #not enough bytes to read the whole packet
             #create packet from buffer content and add to return string
             #check if we have received enough bytes
-            if self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
+            if 'ACK' in str(self.byte_buffer):
+                print(' i am ack')
+                break
+            elif self.is_corrupt(self.byte_buffer):
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
-                sleep(.2)
                 #ret_s = p.msg_S
             else:
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
-                sleep(.2)
 
+            sleep(.2)
             p = Packet.from_byte_S(self.byte_buffer[0:length])
             ret_S = p.msg_S if (ret_S is None) else ret_S + p.msg_S
             #remove the packet bytes from the buffer
