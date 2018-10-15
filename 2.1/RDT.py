@@ -80,18 +80,16 @@ class RDT:
         p = Packet(self.seq_num, msg_S)
         r = ''
         self.network.udt_send(p.get_byte_S())
+        if 'NAK' not in msg_S or 'ACK' not in msg_S:
+            while 'NAK' in r or r is '':
+                r = self.network.udt_receive()
 
-        while 'NAK' in r or r is '':
-            if msg_S == 'ACK':
-                break
-            sleep(.2)
-            r = self.network.udt_receive()
-
-            if 'NAK' in r or r is '': # if we have an actual message
-                self.network.udt_send(p.get_byte_S())
-            else:
-                break
-
+                if 'NAK' in r or r is '': # if we have an actual message
+                    self.network.udt_send(p.get_byte_S())
+                    sleep(.5)
+                else:
+                    break
+        sleep(.2)
         self.seq_num += 1
 
     def rdt_2_1_receive(self):
