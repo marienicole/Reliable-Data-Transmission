@@ -85,7 +85,7 @@ class RDT:
         if 'NAK' not in msg_S or 'ACK' not in msg_S:
             while 'NAK' in r or r is '':
 
-                timeout = time.time() + 0.5 # timeout of 0.5 seconds from start time
+                timeout = time.time() + 0.1 # timeout of 0.5 seconds from start time
                 while r is '' and timeout >= time.time():
                     r = self.network.udt_receive()
                 if r is '':
@@ -131,7 +131,7 @@ class RDT:
             #remove the packet bytes from the buffer
             length = int(self.byte_buffer[:Packet.length_S_length])
             self.byte_buffer = self.byte_buffer[length:]
-      
+
 
     def rdt_2_1_send(self, msg_S):
         pass

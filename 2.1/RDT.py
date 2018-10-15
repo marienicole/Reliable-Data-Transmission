@@ -82,9 +82,10 @@ class RDT:
         self.network.udt_send(p.get_byte_S())
         if 'NAK' not in msg_S or 'ACK' not in msg_S:
             while 'NAK' in r or r is '':
-                r = self.network.udt_receive()
                 sleep(.5)
+                r = self.network.udt_receive()
                 if 'NAK' in r or r is '': # if we have an actual message
+                    print("Received NAK. Resending ...")
                     self.network.udt_send(p.get_byte_S())
                     sleep(.5)
                 else:
@@ -106,16 +107,13 @@ class RDT:
                 return ret_S #not enough bytes to read the whole packet
             #create packet from buffer content and add to return string
             #check if we have received enough bytes
-            if 'ACK' in str(self.byte_buffer):
-                print(' i am ack')
-                break
-            elif self.is_corrupt(self.byte_buffer) or not self.is_ACK(self.byte_buffer):
-                print("packet is corrupted. Send NAK")
+            if self.is_corrupt(self.byte_buffer):# or not self.is_ACK(self.byte_buffer):
+                print("packet is corrupted. Sending NAK")
                 neg_resp = Packet(self.seq_num, "NAK") # send corrupted seq num
                 self.network.udt_send(neg_resp.get_byte_S())
                 #ret_s = p.msg_S
             else:
-                print("Packet is okay. Send ACK")
+                print("Packet is good. Sending ACK")
                 pos_resp = Packet(self.seq_num, "ACK")
                 self.network.udt_send(pos_resp.get_byte_S())
 
